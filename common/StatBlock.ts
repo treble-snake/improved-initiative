@@ -12,6 +12,8 @@ export interface AbilityScores {
   Wis: number;
 }
 
+export type AbilityName = keyof AbilityScores;
+
 export interface NameAndModifier {
   Name: string;
   Modifier: number;
@@ -62,7 +64,7 @@ export interface StatBlock extends Listable {
 }
 
 export namespace StatBlock {
-  export const AbilityNames = ["Str", "Dex", "Con", "Int", "Wis", "Cha"];
+  export const AbilityNames: AbilityName[] = ["Str", "Dex", "Con", "Int", "Wis", "Cha"];
 
   const BaseTypes = [
     "aberration",

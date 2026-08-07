@@ -17,6 +17,122 @@
   align-items: flex-start;
 }
 
+.tag-automation-form() {
+  .add-tag {
+    flex-grow: 1;
+    flex-flow: column;
+    align-items: stretch;
+
+    .add-tag__main {
+      flex-flow: row;
+      align-items: center;
+      justify-content: flex-end;
+    }
+  }
+
+  .add-tag__label {
+    flex-grow: 1;
+  }
+
+  .add-tag__advanced {
+    min-height: 3.3rem;
+    flex-flow: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: @small-spacer;
+    margin-top: @small-spacer;
+  }
+
+  .add-tag__automation-row {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: @small-spacer;
+    box-sizing: border-box;
+    min-height: 3rem;
+    padding: @small-spacer @medium-spacer;
+    border-radius: @border-radius;
+
+    &.is-disabled {
+      color: var(--button-text-disabled);
+      background-color: var(--button-face-disabled);
+    }
+  }
+
+  .add-tag__automation-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 0 1rem;
+    cursor: pointer;
+
+    .add-tag__automation-checkbox {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+
+      &:focus-visible + .add-tag__automation-checkbox-icon {
+        outline: var(--red) auto 2px;
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  .add-tag__automation-checkbox-icon {
+    width: 1rem;
+    text-align: center;
+  }
+
+  .add-tag__control-tooltip {
+    display: inline-flex;
+  }
+
+  .add-tag__automation-controls {
+    display: flex;
+    flex: 1;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: @small-spacer;
+  }
+
+  .add-tag__save-ability {
+    width: 5rem;
+  }
+
+  .add-tag__automation-button {
+    position: relative;
+
+    // Overlaying the d20 preserves the compact button's original width.
+    .fa-hourglass {
+      transform: translate(-0.15rem, -0.1rem);
+    }
+
+    &::after {
+      position: absolute;
+      right: 0.45rem;
+      bottom: 0.45rem;
+      content: @fa-var-dice-d20;
+      font-family: "Font Awesome 5 Free";
+      font-size: 0.65rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+  }
+
+  .add-tag__automation-enabled {
+    .colors(var(--text-inverted), var(--red), var(--red));
+
+    &:hover {
+      background-color: var(--dark-red);
+    }
+  }
+}
+
 .prompt {
   max-height: none;
   .card-bg-2(@large-spacer, @large-spacer);
@@ -75,25 +191,7 @@
     flex-direction: row;
   }
 
-  .add-tag {
-    flex-grow: 1;
-    flex-flow: column;
-    align-items: stretch;
-
-    > div {
-      flex-flow: row;
-      align-items: center;
-      justify-content: flex-end;
-    }
-  }
-
-  .add-tag__label {
-    flex-grow: 1;
-  }
-
-  .add-tag__advanced {
-    min-height: 3.3rem;
-  }
+  .tag-automation-form();
 
   .roll-initiative {
     flex-direction: row;
@@ -503,6 +601,53 @@ button.c-roll-mode-button--disadvantage:hover {
 
 .p-accept-tag__label {
   flex: 1;
+}
+
+.p-tag-save {
+  display: flex;
+  flex: 1;
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.p-tag-save__content {
+  display: flex;
+  flex-flow: column;
+  align-items: flex-start;
+}
+
+.p-tag-save__label {
+  margin: 0;
+}
+
+.p-tag-save__result {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: baseline;
+  gap: @extra-small-spacer;
+  margin-top: @medium-spacer;
+  font-weight: bold;
+}
+
+.p-tag-save__modifier-source {
+  border-bottom: 1px dashed currentColor;
+  cursor: help;
+}
+
+.p-tag-save__result-icon.fa-check {
+  color: var(--green);
+}
+
+.p-tag-save__result-icon.fa-times {
+  color: var(--red);
+}
+
+.p-tag-save__buttons {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .p-save-encounter {

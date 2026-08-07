@@ -20,8 +20,8 @@ export function ToPlayerViewCombatantState(
     Initiative: combatant.Initiative(),
     IsPlayerCharacter: combatant.IsPlayerCharacter(),
     Tags: combatant
-      .Tags()
-      .filter(t => t.NotExpired() && !t.HiddenFromPlayerView)
+      .ActiveTags()
+      .filter(t => !t.HiddenFromPlayerView)
       .map(t => {
         return {
           Text: t.Text,

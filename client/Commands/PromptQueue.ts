@@ -14,8 +14,10 @@ export class PromptQueue {
     return promptId;
   };
 
-  public Remove = (promptId: string) =>
-    this.prompts.remove(p => p[1] == promptId);
+  public Remove = (promptId: string) => {
+    const removedPrompts = this.prompts.remove(p => p[1] == promptId);
+    removedPrompts.forEach(([prompt]) => prompt.onDismiss?.());
+  };
 
   public GetPrompts = ko.pureComputed(() => this.prompts());
 }

@@ -299,6 +299,17 @@ describe("Tag Suggestor", () => {
   let encounter: Encounter;
   let suggestTag: jest.Mock<void>;
 
+  function getFormControl<T extends HTMLElement>(
+    container: HTMLElement,
+    name: string
+  ): T {
+    const control = container.querySelector(`[name="${name}"]`);
+    if (!control) {
+      throw new Error(`Could not find form control named "${name}"`);
+    }
+    return control as T;
+  }
+
   beforeEach(() => {
     InitializeTestSettings({
       PlayerView: {
@@ -339,5 +350,65 @@ describe("Tag Suggestor", () => {
     fireEvent.submit(playerView.container.querySelector("form.tag-suggestion"));
 
     await waitFor(() => expect(suggestTag).toHaveBeenCalledTimes(1));
+  });
+
+  test("Should suggest save-only tags", async () => {
+    encounter.EncounterFlow.StartEncounter();
+    const target = encounter.Combatants()[0];
+    const playerView = render(
+      <PlayerView
+        settings={CurrentSettings().PlayerView}
+        encounterState={encounter.GetPlayerView()}
+        onSuggestDamage={jest.fn()}
+        onSuggestTag={suggestTag}
+      />
+    );
+
+    playerView.getByTitle("Suggest a Tag").click();
+    fireEvent.change(
+      playerView.container.querySelector("input[name='tagText']"),
+      { target: { value: "Restrained" } }
+    );
+    fireEvent.click(playerView.getByTestId("tag-automation-toggle"));
+    fireEvent.click(playerView.getByTestId("tag-timer-toggle"));
+    fireEvent.click(playerView.getByTestId("tag-save-toggle"));
+    expect(
+      getFormControl<HTMLSelectElement>(playerView.container, "saveAbility")
+        .value
+    ).toBe("Str");
+    expect(
+      getFormControl<HTMLInputElement>(playerView.container, "saveDC").value
+    ).toBe("10");
+    expect(
+      getFormControl<HTMLSelectElement>(
+        playerView.container,
+        "saveTimingCombatantId"
+      ).value
+    ).toBe(target.Id);
+    fireEvent.change(
+      getFormControl<HTMLSelectElement>(playerView.container, "saveAbility"),
+      { target: { value: "Dex" } }
+    );
+    fireEvent.change(
+      getFormControl<HTMLInputElement>(playerView.container, "saveDC"),
+      { target: { value: "14" } }
+    );
+    fireEvent.submit(playerView.container.querySelector("form.tag-suggestion"));
+
+    await waitFor(() => expect(suggestTag).toHaveBeenCalledTimes(1));
+    expect(suggestTag).toHaveBeenCalledWith(
+      target.Id,
+      expect.objectContaining({
+        Text: "Restrained",
+        DurationRemaining: 0,
+        DurationCombatantId: "",
+        Save: {
+          Ability: "Dex",
+          DC: 14,
+          Timing: "EndOfTurn",
+          CombatantId: target.Id
+        }
+      })
+    );
   });
 });

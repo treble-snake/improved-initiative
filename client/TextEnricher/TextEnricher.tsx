@@ -63,6 +63,32 @@ export class TextEnricher {
     );
   };
 
+  /** Renders custom text that rolls through the same path as dice expressions. */
+  public EnrichRollableText = (
+    text: string,
+    diceExpression: string,
+    ariaLabel: string
+  ): JSX.Element => {
+    const roll = () => this.rollDice(diceExpression);
+    return (
+      <span
+        aria-label={ariaLabel}
+        className="rollable"
+        onClick={roll}
+        onKeyDown={event => {
+          if (event.key == "Enter" || event.key == " ") {
+            event.preventDefault();
+            roll();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        {text}
+      </span>
+    );
+  };
+
   public EnrichText = (
     text: string,
     updateTextSource?: (newText: string) => void

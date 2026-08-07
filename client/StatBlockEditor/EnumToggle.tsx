@@ -12,6 +12,8 @@ export class EnumToggle extends React.Component<EnumToggleProps> {
           return (
             <Button
               text={buttonLabel}
+              disabled={this.props.disabled}
+              tooltip={this.props.tooltipsByOption?.[fieldProps.field.value]}
               onClick={() => this.toggle(fieldProps)}
             />
           );
@@ -35,5 +37,9 @@ interface EnumToggleProps {
   labelsByOption: {
     [value: string]: string;
   };
+  tooltipsByOption?: {
+    [value: string]: string;
+  };
   fieldName: string;
+  disabled?: boolean;
 }

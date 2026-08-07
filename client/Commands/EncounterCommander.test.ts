@@ -11,6 +11,8 @@ import { renderHook } from "@testing-library/react-hooks";
 import { useLibraries } from "../Library/Libraries";
 import { CurrentSettings } from "../Settings/Settings";
 import { MockAccountClient } from "../MockAccountClient";
+import { Tag } from "../Combatant/Tag";
+import { Combatant } from "../Combatant/Combatant";
 
 describe("EncounterCommander", () => {
   let encounter: Encounter;
@@ -67,6 +69,17 @@ describe("EncounterCommander", () => {
     prompt.onSubmit({ ...prompt.initialValues, Name, Path });
   }
 
+  function addEndOfTurnSaveTag(owner: Combatant): Tag {
+    const tag = new Tag("Restrained", owner, false, -1, "StartOfTurn", "", {
+      Ability: "Dex",
+      DC: 14,
+      Timing: "EndOfTurn",
+      CombatantId: owner.Id
+    });
+    tag.Add();
+    return tag;
+  }
+
   test("Cannot start an empty encounter.", () => {
     encounterCommander.StartEncounter();
     expect(encounter.EncounterFlow.State()).toBe("inactive");
@@ -92,6 +105,99 @@ describe("EncounterCommander", () => {
     encounterCommander.NextTurn();
 
     expect(startEncounter).toHaveBeenCalled();
+  });
+
+  test("Next Turn queues a same-turn end-of-turn tag save", async () => {
+    const ogre = addCombatantFromStatBlock(encounter, {
+      ...StatBlock.Default(),
+      Name: "Ogre"
+    });
+    const cultist = addCombatantFromStatBlock(encounter, {
+      ...StatBlock.Default(),
+      Name: "Cultist"
+    });
+    ogre.Initiative(20);
+    cultist.Initiative(10);
+    encounter.EncounterFlow.StartEncounter();
+    addEndOfTurnSaveTag(ogre);
+
+    await encounterCommander.NextTurn();
+
+    const prompts = trackerViewModel.PromptQueue.GetPrompts();
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0][0].children).toBeTruthy();
+  });
+
+  test("Previous Turn dismisses a save prompt from the undone boundary", async () => {
+    const ogre = addCombatantFromStatBlock(encounter);
+    const cultist = addCombatantFromStatBlock(encounter);
+    ogre.Initiative(20);
+    cultist.Initiative(10);
+    encounter.EncounterFlow.StartEncounter();
+    addEndOfTurnSaveTag(ogre);
+    await encounterCommander.NextTurn();
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(1);
+
+    encounterCommander.PreviousTurn();
+
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(0);
+  });
+
+  test("Fail dismisses the prompt and permits the next save occurrence", async () => {
+    const ogre = addCombatantFromStatBlock(encounter);
+    encounter.EncounterFlow.StartEncounter();
+    const tag = addEndOfTurnSaveTag(ogre);
+    await encounterCommander.NextTurn();
+    const [prompt, promptId] = trackerViewModel.PromptQueue.GetPrompts()[0];
+
+    expect(
+      prompt.onSubmit({ ...prompt.initialValues, resolution: "fail" })
+    ).toBe(true);
+    trackerViewModel.PromptQueue.Remove(promptId);
+    await encounterCommander.NextTurn();
+
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(1);
+    expect(tag.IsActive()).toBe(true);
+  });
+
+  test("Success hides the tag without deleting its rewind state", async () => {
+    const ogre = addCombatantFromStatBlock(encounter);
+    encounter.EncounterFlow.StartEncounter();
+    const tag = addEndOfTurnSaveTag(ogre);
+    await encounterCommander.NextTurn();
+    const [prompt, promptId] = trackerViewModel.PromptQueue.GetPrompts()[0];
+
+    expect(
+      prompt.onSubmit({ ...prompt.initialValues, resolution: "success" })
+    ).toBe(true);
+    trackerViewModel.PromptQueue.Remove(promptId);
+
+    expect(ogre.Tags()).toContain(tag);
+    expect(ogre.GetState().Tags).toEqual([]);
+  });
+
+  test("manually deleting a tag dismisses its outstanding save prompt", async () => {
+    const ogre = addCombatantFromStatBlock(encounter);
+    encounter.EncounterFlow.StartEncounter();
+    const tag = addEndOfTurnSaveTag(ogre);
+    await encounterCommander.NextTurn();
+
+    tag.Remove();
+
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(0);
+    expect(ogre.Tags()).not.toContain(tag);
+  });
+
+  test("ending the encounter dismisses outstanding save prompts", async () => {
+    const ogre = addCombatantFromStatBlock(encounter);
+    encounter.EncounterFlow.StartEncounter();
+    addEndOfTurnSaveTag(ogre);
+    await encounterCommander.NextTurn();
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(1);
+
+    encounterCommander.EndEncounter();
+
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(0);
   });
 
   test("CleanEncounter", async () => {
@@ -349,12 +455,7 @@ describe("EncounterCommander", () => {
         .map(c => c.DisplayName());
 
       expect(combatantDisplayNames).toEqual(
-        expect.arrayContaining([
-          "Goblin 1",
-          "Goblin 2",
-          "Goblin 3",
-          "Goblin 4"
-        ])
+        expect.arrayContaining(["Goblin 1", "Goblin 2", "Goblin 3", "Goblin 4"])
       );
       expect(combatantDisplayNames).toHaveLength(4);
     });

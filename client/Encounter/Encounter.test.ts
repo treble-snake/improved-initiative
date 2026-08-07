@@ -48,7 +48,7 @@ describe("Encounter", () => {
     expect(encounter.EncounterFlow.ActiveCombatant()).toBe(
       encounter.Combatants()[0]
     );
-    expect(promptReroll).not.toBeCalled();
+    expect(promptReroll).not.toHaveBeenCalled();
   });
 
   test("Display post-combat stats produces reasonable results", () => {
@@ -228,6 +228,10 @@ describe("Encounter", () => {
     const combatant1 = addCombatantFromStatBlock(encounter);
     const combatant2 = addCombatantFromStatBlock(encounter);
     const combatant3 = addCombatantFromStatBlock(encounter);
+    const tag = new Tag("Restrained", combatant1, false);
+    const onTagRemove = jest.fn();
+    tag.OnRemove(onTagRemove);
+    combatant1.Tags.push(tag);
 
     encounter.RemoveCombatant(combatant1);
     encounter.RemoveCombatant(combatant2);
@@ -235,6 +239,8 @@ describe("Encounter", () => {
     encounter.FlushCombatants();
 
     expect(encounter.Combatants()).toEqual([combatant3]);
+    expect(combatant1.Tags()).toEqual([]);
+    expect(onTagRemove).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -266,6 +272,77 @@ describe("Tags", () => {
     const playerView = encounter.GetPlayerView();
     const playerViewCombatant = playerView.Combatants[0];
     expect(playerViewCombatant.Tags).toEqual([]);
+  });
+
+  test("publishes an active save tag without exposing its save metadata", () => {
+    const encounter = buildEncounter();
+    const combatant = addCombatantFromStatBlock(encounter);
+    combatant.Tags.push(
+      new Tag("Restrained", combatant, false, -1, "StartOfTurn", "", {
+        Ability: "Dex",
+        DC: 14,
+        Timing: "EndOfTurn",
+        CombatantId: combatant.Id
+      })
+    );
+
+    expect(encounter.GetPlayerView().Combatants[0].Tags).toEqual([
+      {
+        Text: "Restrained",
+        DurationRemaining: -1,
+        DurationTiming: "StartOfTurn",
+        DurationCombatantId: ""
+      }
+    ]);
+  });
+
+  test("retains a successful save tag for rewind but excludes it from state", () => {
+    const encounter = buildEncounter();
+    const combatant = addCombatantFromStatBlock(encounter);
+    const tag = new Tag("Restrained", combatant, false, -1, "StartOfTurn", "", {
+      Ability: "Dex",
+      DC: 14,
+      Timing: "EndOfTurn",
+      CombatantId: combatant.Id
+    });
+    combatant.Tags.push(tag);
+    const trigger = tag.AdvanceSaveTrigger();
+    tag.ResolveSaveSuccess(trigger);
+
+    expect(combatant.Tags()).toContain(tag);
+    expect(combatant.GetState().Tags).toEqual([]);
+    expect(encounter.GetPlayerView().Combatants[0].Tags).toEqual([]);
+
+    tag.RewindSaveTrigger();
+    expect(combatant.GetState().Tags[0].Save).toEqual(tag.Save);
+  });
+
+  test("active save metadata survives encounter-state hydration", async () => {
+    const source = buildEncounter();
+    const sourceCombatant = addCombatantFromStatBlock(source);
+    sourceCombatant.Tags.push(
+      new Tag("Restrained", sourceCombatant, false, -1, "StartOfTurn", "", {
+        Ability: "Wis",
+        DC: 15,
+        Timing: "EndOfTurn",
+        CombatantId: sourceCombatant.Id
+      })
+    );
+
+    const encounter = buildEncounter();
+    const combatant = encounter.AddCombatantFromState(
+      sourceCombatant.GetState()
+    );
+    encounter.EncounterFlow.StartEncounter();
+
+    expect(combatant.Tags()[0].Save).toEqual({
+      Ability: "Wis",
+      DC: 15,
+      Timing: "EndOfTurn",
+      CombatantId: combatant.Id
+    });
+    const result = await encounter.EncounterFlow.NextTurn(jest.fn());
+    expect(result.SaveTriggers[0].Tag).toBe(combatant.Tags()[0]);
   });
 });
 

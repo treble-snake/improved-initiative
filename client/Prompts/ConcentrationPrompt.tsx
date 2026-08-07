@@ -43,7 +43,7 @@ export function ConcentrationPrompt(
       combatant
         .Tags()
         .filter(t => t.Text === ConcentrationTagText)
-        .forEach(tag => combatant.Tags.remove(tag));
+        .forEach(tag => tag.Remove());
       return true;
     }
   };

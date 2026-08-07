@@ -1,7 +1,7 @@
 import { PromptQueue } from "./PromptQueue";
 import { PromptProps } from "../Prompts/PendingPrompts";
 
-function MockPrompt(): PromptProps<{}> {
+function MockPrompt(): PromptProps<Record<string, never>> {
   return {
     autoFocusSelector: "",
     children: null,
@@ -24,5 +24,17 @@ describe("PromptQueue", () => {
     const promptId = promptQueue.Add(prompt);
     promptQueue.Remove(promptId);
     expect(prompt.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("Calls an optional dismissal callback exactly once", () => {
+    const promptQueue = new PromptQueue();
+    const onDismiss = jest.fn();
+    const prompt = { ...MockPrompt(), onDismiss };
+    const promptId = promptQueue.Add(prompt);
+
+    promptQueue.Remove(promptId);
+    promptQueue.Remove(promptId);
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

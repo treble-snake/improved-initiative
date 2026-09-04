@@ -1,5 +1,5 @@
 import { StatBlock } from "../../common/StatBlock";
-import { Dice } from "../Rules/Dice";
+import { rollExpression } from "../Rules/DiceExpression";
 import { CurrentSettings } from "../Settings/Settings";
 
 export enum VariantMaximumHP {
@@ -18,7 +18,7 @@ export function GetOrRollMaximumHP(
       return 1;
     } else if (variant == VariantMaximumHP.BOSS || rollMonsterHp) {
       try {
-        const hpResult = Dice.RollDiceExpression(statBlock.HP.Notes);
+        const hpResult = rollExpression(statBlock.HP.Notes);
         if (variant == VariantMaximumHP.BOSS) {
           return hpResult.Maximum;
         }

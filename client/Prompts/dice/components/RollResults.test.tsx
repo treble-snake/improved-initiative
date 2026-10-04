@@ -116,14 +116,14 @@ describe("RollResultComponent", () => {
   test.each([
     {
       mode: RollModes.Advantage,
-      buttonName: "Add advantage",
+      buttonName: "Apply advantage",
       addedRoll: 17,
       expectedTotal: "19",
       expectedKeptIndex: 1
     },
     {
       mode: RollModes.Disadvantage,
-      buttonName: "Add disadvantage",
+      buttonName: "Apply disadvantage",
       addedRoll: 3,
       expectedTotal: "5",
       expectedKeptIndex: 1
@@ -164,10 +164,10 @@ describe("RollResultComponent", () => {
         "p-roll-dice-result__roll--discarded"
       );
       expect(
-        rendered.queryByRole("button", { name: "Add advantage" })
+        rendered.queryByRole("button", { name: "Apply advantage" })
       ).toBeNull();
       expect(
-        rendered.queryByRole("button", { name: "Add disadvantage" })
+        rendered.queryByRole("button", { name: "Apply disadvantage" })
       ).toBeNull();
     }
   );
@@ -182,10 +182,10 @@ describe("RollResultComponent", () => {
       const rendered = RenderRollResult(new DiceRoll(diceCount, dieSize, 0));
 
       expect(
-        rendered.queryByRole("button", { name: "Add advantage" })
+        rendered.queryByRole("button", { name: "Apply advantage" })
       ).toBeNull();
       expect(
-        rendered.queryByRole("button", { name: "Add disadvantage" })
+        rendered.queryByRole("button", { name: "Apply disadvantage" })
       ).toBeNull();
     }
   );

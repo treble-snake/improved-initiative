@@ -78,19 +78,19 @@ export const RollResultComponent = ({
           <>
             <Button
               additionalClassNames="c-roll-mode-button c-roll-mode-button--advantage"
-              ariaLabel="Add advantage"
+              ariaLabel="Apply advantage"
               fontAwesomeIcon="dice-d20"
               onClick={() => updateRoll(roll.WithMode(RollModes.Advantage))}
               text="A"
-              tooltip="Add advantage"
+              tooltip="Apply advantage"
             />
             <Button
               additionalClassNames="c-roll-mode-button c-roll-mode-button--disadvantage"
-              ariaLabel="Add disadvantage"
+              ariaLabel="Apply disadvantage"
               fontAwesomeIcon="dice-d20"
               onClick={() => updateRoll(roll.WithMode(RollModes.Disadvantage))}
               text="D"
-              tooltip="Add disadvantage"
+              tooltip="Apply disadvantage"
             />
           </>
         )}

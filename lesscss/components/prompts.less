@@ -26,11 +26,6 @@
   min-height: @prompt-minimum-height;
   position: relative;
 
-  input,
-  button {
-    border-radius: 3px;
-  }
-
   .prompt__utility-controls {
     position: absolute;
     z-index: 1;
@@ -379,40 +374,79 @@
 }
 
 button.c-roll-mode-button {
+  isolation: isolate;
   overflow: hidden;
-  border-color: transparent;
-  border-radius: 3px;
+  border-color: currentColor;
   font-size: 1rem;
   font-weight: bold;
-
-  &:hover {
-    background-color: var(--button-face);
-    border-color: currentColor;
-  }
+  color: var(--red);
 
   .fas {
     position: absolute;
-    top: 50%;
+    z-index: -1;
+    top: 52%;
     left: 50%;
     margin: 0;
     opacity: 0.2;
-    font-size: 2.2rem;
+    font-size: 2.05rem;
     transform: translate(-50%, -50%);
+  }
+
+  &:hover .fas {
+    opacity: .3;
   }
 }
 
 button.c-roll-mode-button--advantage,
 button.c-roll-mode-button--advantage:hover {
-  color: var(--green);
+    color: var(--green);
+    border-color: var(--green);
+    outline-color: var(--green);
 }
 
-button.c-roll-mode-button--advantage:focus {
-  outline-color: var(--green);
+button.c-roll-mode-button--advantage:hover {
+  background-color: color-mix(in srgb, var(--white), var(--green) 10%);
 }
 
-button.c-roll-mode-button--disadvantage,
 button.c-roll-mode-button--disadvantage:hover {
-  color: var(--red);
+  background-color: color-mix(in srgb, var(--white), var(--red) 10%);
+}
+
+.dark-mode {
+  button.c-roll-mode-button {
+    color: var(--white)
+  }
+
+  button.c-roll-mode-button:hover {
+    background-color: var(--hover-white);
+  }
+
+  button.c-roll-mode-button,
+  button.c-roll-mode-button:hover {
+    border-color: var(--red);
+  }
+
+  button.c-roll-mode-button--advantage,
+  button.c-roll-mode-button--advantage:hover, {
+    border-color: var(--green);
+  }
+
+  button.c-roll-mode-button .fas {
+    color: var(--dark-red);
+    opacity: 0.6;
+  }
+
+  button.c-roll-mode-button:hover .fas {
+    color: var(--red);
+  }
+
+  button.c-roll-mode-button--advantage .fas {
+    color: var(--dark-green);
+  }
+
+  button.c-roll-mode-button--advantage:hover .fas {
+    color: var(--green);
+  }
 }
 
 .p-standard-prompt.p-quick-add {

@@ -163,7 +163,7 @@ describe("CombatantCommander", () => {
       })
     );
 
-    fireEvent.click(rendered.getByRole("button", { name: "Add advantage" }));
+    fireEvent.click(rendered.getByRole("button", { name: "Apply advantage" }));
 
     expect(trackEvent).toHaveBeenLastCalledWith(Metrics.Event.DiceRolled, {
       expression: "adv:1d20+2",

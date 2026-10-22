@@ -6,7 +6,7 @@ export interface PromptProps<T extends object> {
   onSubmit: (submittedValues: T) => boolean;
   onDismiss?: () => void;
   children: React.ReactChild;
-  autoFocusSelector: string;
+  autoFocusSelector?: string;
   initialValues: T;
   className?: string;
 }
@@ -71,7 +71,7 @@ class Prompt<T extends object> extends React.Component<
   }
 
   private delaySoAutoFocusedFieldDoesntSwallowHotkey = () => {
-    if (!this.formElement) {
+    if (!this.formElement || !this.props.autoFocusSelector) {
       return;
     }
 

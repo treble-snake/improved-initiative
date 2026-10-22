@@ -2,18 +2,21 @@ import { Formik, FormikProps } from "formik";
 import * as React from "react";
 import { TagState } from "../../../common/CombatantState";
 import { PlayerViewCombatantState } from "../../../common/PlayerViewCombatantState";
-import { EndOfTurn, StartOfTurn } from "../../Combatant/Tag";
-import { TagModel, TagPromptComponent } from "../../Prompts/TagPrompt";
+import {
+  BuildTagAutomation,
+  GetDefaultTagModel,
+  TagModel,
+  TagPromptComponent
+} from "../../Prompts/TagPrompt";
 
 export class TagSuggestor extends React.Component<TagSuggestorProps> {
   public render() {
     return (
       <Formik
-        initialValues={{
-          tagText: "",
-          tagTimingId: this.props.activeCombatantId,
-          tagTiming: StartOfTurn
-        }}
+        initialValues={GetDefaultTagModel(
+          this.props.activeCombatantId ?? "",
+          this.props.targetCombatant.Id
+        )}
         onSubmit={model => {
           this.applyTag(model);
         }}
@@ -36,33 +39,32 @@ export class TagSuggestor extends React.Component<TagSuggestorProps> {
       return true;
     }
 
-    if (model.tagDuration) {
-      // If tag is set to expire at the end of the current combatant's turn in one round,
-      // we need to add a grace round so it doesn't end immediately at the end of this turn.
-      const timingKeyedCombatantIsActive =
-        model.tagTimingId == this.props.activeCombatantId;
-      const durationGraceRound =
-        timingKeyedCombatantIsActive && model.tagTiming == EndOfTurn ? 1 : 0;
-
-      const tagState: TagState = {
-        Text: model.tagText,
-        DurationCombatantId: model.tagTimingId,
-        DurationRemaining: model.tagDuration + durationGraceRound,
-        DurationTiming: model.tagTiming
-      };
-
-      this.props.onApply(tagState);
-      return true;
-    } else {
-      const tagState: TagState = {
-        Text: model.tagText,
-        DurationCombatantId: "",
-        DurationRemaining: 0,
-        DurationTiming: null
-      };
-      this.props.onApply(tagState);
-      return true;
+    const automation = BuildTagAutomation(
+      model,
+      this.props.activeCombatantId != null,
+      this.props.activeCombatantId,
+      combatantId =>
+        Object.prototype.hasOwnProperty.call(
+          this.props.combatantNamesById,
+          combatantId
+        )
+    );
+    if (automation === null) {
+      return false;
     }
+
+    const tagState: TagState = {
+      Text: model.tagText,
+      DurationCombatantId: automation.Duration?.CombatantId ?? "",
+      DurationRemaining: automation.Duration?.Remaining ?? 0,
+      DurationTiming: automation.Duration?.Timing ?? null
+    };
+    if (automation.Save) {
+      tagState.Save = automation.Save;
+    }
+
+    this.props.onApply(tagState);
+    return true;
   };
 }
 
@@ -70,7 +72,7 @@ export type ApplyTagCallback = (tagState: TagState) => void;
 
 interface TagSuggestorProps {
   targetCombatant: PlayerViewCombatantState;
-  activeCombatantId: string;
+  activeCombatantId: string | null;
   combatantNamesById: { [combatantId: string]: string };
   onApply: ApplyTagCallback;
 }

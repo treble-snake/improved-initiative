@@ -12,6 +12,18 @@ export function InitiativeList(props: {
   combatantCountsByName: { [name: string]: number };
 }) {
   const encounterState = props.encounterState;
+  const combatantNamesById = encounterState.Combatants.reduce(
+    (namesById, combatantState) => {
+      const siblingCount =
+        props.combatantCountsByName[combatantState.StatBlock.Name] || 1;
+      namesById[combatantState.Id] = GetCombatantDisplayName(
+        combatantState,
+        siblingCount > 1
+      );
+      return namesById;
+    },
+    {} as { [id: string]: string }
+  );
 
   return (
     <div className="initiative-list">
@@ -33,10 +45,8 @@ export function InitiativeList(props: {
                 isSelected={props.selectedCombatantIds.some(
                   id => id == combatantState.Id
                 )}
-                // Show index labels if the encounter has ever had more than one
-                // creature with this name.
-                showIndexLabel={siblingCount > 1}
                 initiativeIndex={index}
+                combatantNamesById={combatantNamesById}
               />
             );
           })}
@@ -45,4 +55,18 @@ export function InitiativeList(props: {
       <RestoreCombatants />
     </div>
   );
+}
+
+/** Applies the same alias and duplicate-index policy everywhere names appear. */
+export function GetCombatantDisplayName(
+  combatantState: CombatantState,
+  showIndexLabel: boolean
+): string {
+  if (combatantState.Alias?.length) {
+    return combatantState.Alias;
+  }
+  if (showIndexLabel) {
+    return `${combatantState.StatBlock.Name} ${combatantState.IndexLabel}`;
+  }
+  return combatantState.StatBlock.Name;
 }

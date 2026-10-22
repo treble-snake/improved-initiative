@@ -15,8 +15,8 @@ type CombatantRowProps = {
   combatantState: CombatantState;
   isActive: boolean;
   isSelected: boolean;
-  showIndexLabel: boolean;
   initiativeIndex: number;
+  combatantNamesById: { [id: string]: string };
 };
 
 type CombatantDragData = {
@@ -25,7 +25,7 @@ type CombatantDragData = {
 };
 
 export function CombatantRow(props: CombatantRowProps) {
-  const displayName = getDisplayName(props);
+  const displayName = props.combatantNamesById[props.combatantState.Id];
   const commandContext = React.useContext(CommandContext);
 
   const settings = React.useContext(SettingsContext);
@@ -202,6 +202,7 @@ export function CombatantRow(props: CombatantRowProps) {
           <Tags
             tags={props.combatantState.Tags}
             combatantId={props.combatantState.Id}
+            combatantNamesById={props.combatantNamesById}
           />
           <Commands />
           {DisplayReactionTracker && (
@@ -316,16 +317,6 @@ function getClassNames(props: CombatantRowProps) {
     classNames.push("selected");
   }
   return classNames;
-}
-
-function getDisplayName(props: CombatantRowProps) {
-  let displayName = props.combatantState.StatBlock.Name;
-  if (props.combatantState.Alias?.length) {
-    displayName = props.combatantState.Alias;
-  } else if (props.showIndexLabel) {
-    displayName += " " + props.combatantState.IndexLabel;
-  }
-  return displayName;
 }
 
 function getHPStyle(props: CombatantRowProps) {

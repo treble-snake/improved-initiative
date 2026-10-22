@@ -54,6 +54,9 @@ export class Combatant {
   public Alias = ko.observable("");
   public TemporaryHP = ko.observable(0);
   public Tags = ko.observableArray<Tag>();
+  public ActiveTags = ko.pureComputed(() =>
+    this.Tags().filter(tag => tag.IsActive())
+  );
   public Initiative = ko.observable(0);
   public InitiativeGroup = ko.observable<string>(null);
   public StatBlock = ko.observable<StatBlock>(StatBlock.Default());
@@ -264,9 +267,7 @@ export class Combatant {
       InitiativeGroup: this.InitiativeGroup(),
       Alias: this.Alias(),
       IndexLabel: this.IndexLabel(),
-      Tags: this.Tags()
-        .filter(t => t.NotExpired())
-        .map(t => t.GetState()),
+      Tags: this.ActiveTags().map(t => t.GetState()),
       Hidden: this.Hidden(),
       RevealedAC: this.RevealedAC(),
       Color: this.Color(),

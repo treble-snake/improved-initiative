@@ -163,7 +163,7 @@ export class CombatantViewModel {
   }
 
   public RemoveTag = (tag: Tag) => {
-    this.Combatant.Tags.splice(this.Combatant.Tags.indexOf(tag), 1);
+    tag.Remove();
     this.LogEvent(`${this.Name()} removed tag: "${tag.Text}"`);
   };
 
@@ -172,7 +172,7 @@ export class CombatantViewModel {
       _.isEqual(tagState, t.GetState())
     );
     if (tag !== undefined) {
-      this.Combatant.Tags.remove(tag);
+      tag.Remove();
     }
   };
 }

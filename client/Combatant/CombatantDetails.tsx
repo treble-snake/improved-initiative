@@ -1,5 +1,7 @@
 import * as React from "react";
+import Tippy from "@tippyjs/react";
 
+import { toModifierString } from "../../common/Toolbox";
 import { StatBlockComponent } from "../Components/StatBlock";
 import { StatBlockHeader } from "../Components/StatBlockHeader";
 import { TextEnricherContext } from "../TextEnricher/TextEnricher";
@@ -8,6 +10,8 @@ import { useSubscription } from "./linkComponentToObservables";
 import { SettingsContext } from "../Settings/SettingsContext";
 import { Tag } from "./Tag";
 import { useContext } from "react";
+import { GetSavingThrowModifier } from "./GetSavingThrowModifier";
+import { GetTagSaveLabel, GetTagSaveRollTooltip } from "./TagSaveText";
 
 interface CombatantDetailsProps {
   combatantViewModel: CombatantViewModel;
@@ -22,7 +26,7 @@ export function CombatantDetails(props: CombatantDetailsProps): JSX.Element {
     props.combatantViewModel.HPPercentage
   );
   const name = useSubscription(props.combatantViewModel.Name);
-  const tags = useSubscription(props.combatantViewModel.Combatant.Tags);
+  const tags = useSubscription(props.combatantViewModel.Combatant.ActiveTags);
   const notes = useSubscription(
     props.combatantViewModel.Combatant.CurrentNotes
   );
@@ -92,20 +96,83 @@ export function CombatantDetails(props: CombatantDetailsProps): JSX.Element {
 }
 
 function TagDetails(props: { tag: Tag }) {
-  const notExpired = useSubscription(props.tag.NotExpired);
   const durationRemaining = useSubscription(props.tag.DurationRemaining);
-  if (!notExpired) {
-    return null;
-  }
-  if (props.tag.HasDuration) {
-    return (
-      <span className="stat-value__item">
-        {props.tag.Text} ({durationRemaining} more rounds)
-      </span>
-    );
-  }
+  const details = GetTagDetails(props.tag, durationRemaining);
 
-  return <span className="stat-value__item">{props.tag.Text}</span>;
+  return (
+    <span className="stat-value__item">
+      {props.tag.Text}
+      {details.length > 0 && (
+        <>
+          {" ("}
+          {details.map((detail, index) => (
+            <React.Fragment key={index}>
+              {index > 0 && ", "}
+              {detail.Type == "save" ? (
+                <TagSaveDetails tag={props.tag} />
+              ) : (
+                detail.Text
+              )}
+            </React.Fragment>
+          ))}
+          {`)`}
+        </>
+      )}
+    </span>
+  );
+}
+
+function TagSaveDetails(props: { tag: Tag }) {
+  const TextEnricher = useContext(TextEnricherContext);
+  const save = props.tag.Save;
+  const ability = save.Ability.toUpperCase();
+  const modifier = GetSavingThrowModifier(
+    props.tag.Combatant.StatBlock(),
+    save.Ability,
+    props.tag.Combatant.Encounter.Rules
+  ).Modifier;
+  const tooltip = GetTagSaveRollTooltip(save.Ability);
+
+  return (
+    <Tippy content={tooltip}>
+      {TextEnricher.EnrichRollableText(
+        GetTagSaveLabel(save),
+        toModifierString(modifier),
+        `Roll ${ability} save`
+      )}
+    </Tippy>
+  );
+}
+
+interface TagDetail {
+  Type: "duration" | "save";
+  Text: string;
+}
+
+function GetTagDetails(tag: Tag, durationRemaining: number): TagDetail[] {
+  const details: TagDetail[] = [];
+  if (tag.HasDuration) {
+    details.push({
+      Type: "duration",
+      Text: `${durationRemaining} more rounds`
+    });
+  }
+  if (tag.Save) {
+    details.push({
+      Type: "save",
+      Text: GetTagSaveLabel(tag.Save)
+    });
+  }
+  return details;
+}
+
+/** Formats a tag's timer and save metadata for the selected-combatant panel. */
+export function FormatTagDetails(tag: Tag, durationRemaining: number): string {
+  const details = GetTagDetails(tag, durationRemaining).map(
+    detail => detail.Text
+  );
+
+  return details.length > 0 ? `${tag.Text} (${details.join(", ")})` : tag.Text;
 }
 function renderHPBarStyle(currentHPPercentage) {
   return { width: currentHPPercentage };

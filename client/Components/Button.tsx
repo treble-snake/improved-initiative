@@ -15,6 +15,7 @@ export interface ButtonProps {
 
   type?: "button" | "submit";
   disabled?: boolean;
+  dataTestId?: string;
 }
 
 export function Button(props: ButtonProps): JSX.Element {
@@ -43,7 +44,9 @@ export function Button(props: ButtonProps): JSX.Element {
       aria-label={props.ariaLabel}
       onClick={props.disabled ? undefined : props.onClick}
       onMouseOver={props.disabled ? undefined : props.onMouseOver}
+      disabled={props.disabled}
       tabIndex={props.disabled ? -1 : 0}
+      data-testid={props.dataTestId}
     >
       {faElement}
       {text}

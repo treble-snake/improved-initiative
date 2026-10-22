@@ -15,9 +15,14 @@ import { QuickAddPrompt } from "../Prompts/QuickAddPrompt";
 import { RollDicePrompt } from "../Prompts/dice/RollDicePrompt";
 import { ToggleFullscreen } from "./ToggleFullscreen";
 import { PersistentCharacter } from "../../common/PersistentCharacter";
+import { Tag } from "../Combatant/Tag";
+import { TagSaveTrigger } from "../Encounter/EncounterFlow";
+import { TagSavePrompt } from "../Prompts/TagSavePrompt";
 
 export class EncounterCommander {
   constructor(private tracker: TrackerViewModel) {}
+
+  private tagSavePromptIds = new Map<Tag, string>();
 
   public QuickAddStatBlock = (): void => {
     const prompt = QuickAddPrompt(
@@ -122,6 +127,7 @@ export class EncounterCommander {
       return;
     }
 
+    this.removeAllSavePrompts();
     this.tracker.Encounter.EncounterFlow.EndEncounter();
     this.tracker.EventLog.AddEvent("Encounter ended.");
     Metrics.TrackEvent(Metrics.Event.EncounterEnded, {
@@ -175,6 +181,7 @@ export class EncounterCommander {
 
   public ClearEncounter = (): boolean => {
     if (confirm("Remove all combatants and end encounter?")) {
+      this.removeAllSavePrompts();
       this.tracker.Encounter.ClearEncounter();
       this.tracker.CombatantCommander.Deselect();
       this.tracker.EventLog.AddEvent("All combatants removed from encounter.");
@@ -297,7 +304,11 @@ export class EncounterCommander {
       });
     }
 
-    await this.tracker.Encounter.EncounterFlow.NextTurn(this.RerollInitiative);
+    const turnResult = await this.tracker.Encounter.EncounterFlow.NextTurn(
+      this.RerollInitiative
+    );
+    this.removeInvalidatedSavePrompts(turnResult.InvalidatedSavePromptTags);
+    turnResult.SaveTriggers.forEach(this.enqueueTagSavePrompt);
 
     const turnStartCombatant =
       this.tracker.Encounter.EncounterFlow.ActiveCombatant();
@@ -313,7 +324,8 @@ export class EncounterCommander {
       return;
     }
 
-    this.tracker.Encounter.EncounterFlow.PreviousTurn();
+    const turnResult = this.tracker.Encounter.EncounterFlow.PreviousTurn();
+    this.removeInvalidatedSavePrompts(turnResult.InvalidatedSavePromptTags);
     const currentCombatant =
       this.tracker.Encounter.EncounterFlow.ActiveCombatant();
     this.tracker.EventLog.AddEvent(
@@ -321,6 +333,49 @@ export class EncounterCommander {
     );
 
     return false;
+  };
+
+  private removeInvalidatedSavePrompts = (tags: Tag[]): void => {
+    tags.forEach(tag => {
+      const promptId = this.tagSavePromptIds.get(tag);
+      if (promptId) {
+        this.tracker.PromptQueue.Remove(promptId);
+      }
+    });
+  };
+
+  private removeAllSavePrompts = (): void => {
+    Array.from(this.tagSavePromptIds.values()).forEach(promptId =>
+      this.tracker.PromptQueue.Remove(promptId)
+    );
+  };
+
+  private enqueueTagSavePrompt = (saveTrigger: TagSaveTrigger): void => {
+    const tag = saveTrigger.Tag;
+    if (this.tagSavePromptIds.has(tag)) {
+      return;
+    }
+
+    const prompt = TagSavePrompt(
+      tag,
+      saveTrigger.Trigger,
+      this.tracker.CombatantCommander.RollDice
+    );
+    const dismissSavePrompt = prompt.onDismiss;
+    let stopListeningForRemoval = () => {};
+    prompt.onDismiss = () => {
+      dismissSavePrompt?.();
+      stopListeningForRemoval();
+      if (this.tagSavePromptIds.get(tag) === promptId) {
+        this.tagSavePromptIds.delete(tag);
+      }
+    };
+
+    const promptId = this.tracker.PromptQueue.Add(prompt);
+    this.tagSavePromptIds.set(tag, promptId);
+    stopListeningForRemoval = tag.OnRemove(() => {
+      this.tracker.PromptQueue.Remove(promptId);
+    });
   };
 
   public PromptRollDice = (): void => {

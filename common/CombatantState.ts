@@ -1,11 +1,20 @@
 import { DurationTiming } from "./DurationTiming";
-import { StatBlock } from "./StatBlock";
+import { AbilityName, StatBlock } from "./StatBlock";
+
+/** Persisted configuration for the saving throw that can end a tag. */
+export interface TagSaveState {
+  Ability: AbilityName;
+  DC: number;
+  Timing: DurationTiming;
+  CombatantId: string;
+}
 
 export interface TagState {
   Text: string;
   DurationRemaining: number;
   DurationTiming: DurationTiming;
   DurationCombatantId: string;
+  Save?: TagSaveState;
   Hidden?: boolean;
 }
 

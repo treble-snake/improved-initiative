@@ -173,11 +173,7 @@ export class Encounter {
       this.promptEditCombatantInitiative(combatant.Id);
     }
 
-    combatant.Tags().forEach(tag => {
-      if (tag.HasDuration) {
-        this.EncounterFlow.AddDurationTag(tag);
-      }
-    });
+    combatant.Tags().forEach(this.EncounterFlow.AddTurnTriggeredTag);
 
     return combatant;
   };
@@ -270,6 +266,12 @@ export class Encounter {
       console.warn("Cannot flush combatant that is not pending removal");
       return;
     }
+    // Pending combatants can still be restored; flushing is the point where
+    // their tags and any open tag prompts become permanently removable.
+    combatant
+      .Tags()
+      .slice()
+      .forEach(tag => tag.Remove());
     this.combatants.remove(combatant);
 
     const removedCombatantName = combatant.StatBlock().Name;
@@ -476,7 +478,14 @@ export class Encounter {
   };
 
   public ClearEncounter = () => {
+    this.combatants().forEach(combatant =>
+      combatant
+        .Tags()
+        .slice()
+        .forEach(tag => tag.Remove())
+    );
     this.combatants([]);
+    this.EncounterFlow.ClearTurnTriggeredTags();
     this.CombatantCountsByName({});
     this.EncounterFlow.EndEncounter();
     this.SaveEncounterDefaults(null);

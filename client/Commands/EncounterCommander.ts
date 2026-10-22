@@ -356,7 +356,11 @@ export class EncounterCommander {
       return;
     }
 
-    const prompt = TagSavePrompt(tag, saveTrigger.Trigger);
+    const prompt = TagSavePrompt(
+      tag,
+      saveTrigger.Trigger,
+      this.tracker.CombatantCommander.RollDice
+    );
     const dismissSavePrompt = prompt.onDismiss;
     let stopListeningForRemoval = () => {};
     prompt.onDismiss = () => {

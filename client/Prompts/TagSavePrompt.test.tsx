@@ -1,9 +1,4 @@
-import {
-  fireEvent,
-  render,
-  RenderResult,
-  waitFor
-} from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import * as React from "react";
 
 import { StatBlock } from "../../common/StatBlock";
@@ -40,7 +35,8 @@ describe("TagSavePrompt", () => {
     });
     combatant.Tags.push(tag);
     const trigger = tag.AdvanceSaveTrigger();
-    const prompt = TagSavePrompt(tag, trigger);
+    const rollDice = jest.fn();
+    const prompt = TagSavePrompt(tag, trigger, rollDice);
     const removePrompt = jest.fn();
     const view = render(
       <PendingPrompts
@@ -48,16 +44,7 @@ describe("TagSavePrompt", () => {
         removePrompt={removePrompt}
       />
     );
-    return { combatant, tag, prompt, removePrompt, view };
-  }
-
-  function getRollText(view: RenderResult): string {
-    const result = view.container.querySelector(".p-tag-save__result");
-    return Array.from(result.children)
-      .filter(element => !element.classList.contains("screen-reader-only"))
-      .map(element => element.textContent.trim())
-      .filter(Boolean)
-      .join(" ");
+    return { combatant, tag, prompt, removePrompt, view, rollDice };
   }
 
   test("uses the combatant display name and does not roll on render", () => {
@@ -102,58 +89,26 @@ describe("TagSavePrompt", () => {
     }
   });
 
-  test("Roll identifies an explicit positive save modifier and succeeds at exact DC", async () => {
-    const { view, tag } = buildPrompt({ explicitModifier: 1, dc: 14 });
-    const random = jest.spyOn(Math, "random").mockReturnValue(13 / 20);
+  test.each([
+    [{ explicitModifier: 5 }, "+5"],
+    [{ explicitModifier: 0 }, "+0"],
+    [{ explicitModifier: -2 }, "-2"],
+    [{ abilityScore: 12 }, "+1"],
+    [{ abilityScore: 8 }, "-1"]
+  ])(
+    "opens the regular roll with the current modifier: %j",
+    (options, expression) => {
+      const { view, tag, rollDice, removePrompt } = buildPrompt(options);
 
-    fireEvent.click(view.getByRole("button", { name: /Roll/ }));
+      expect(rollDice).not.toHaveBeenCalled();
+      fireEvent.click(view.getByRole("button", { name: /Roll/ }));
 
-    const result = view.container.querySelector(".p-tag-save__result");
-    expect(result.querySelector(".fa-dice-d20")).toBeTruthy();
-    expect(getRollText(view)).toContain("13 + (DEX) 1 = 14");
-    expect(view.getByText("Save succeeds")).toBeTruthy();
-    expect(view.queryByText("*")).toBeNull();
-    fireEvent.mouseEnter(view.getByText("(DEX)"));
-    expect(await view.findByText("DEX save +1")).toBeTruthy();
-    expect(tag.IsActive()).toBe(true);
-    expect(random).toHaveBeenCalledTimes(1);
-    random.mockRestore();
-  });
-
-  test("Roll identifies a raw ability modifier fallback and displays failure", async () => {
-    const { view } = buildPrompt({ abilityScore: 12, dc: 14 });
-    const random = jest.spyOn(Math, "random").mockReturnValue(10 / 20);
-
-    fireEvent.click(view.getByRole("button", { name: /Roll/ }));
-
-    expect(getRollText(view)).toContain("10 + (DEX) 1 = 11");
-    expect(view.queryByText("*")).toBeNull();
-    expect(view.getByText("Save fails")).toBeTruthy();
-    fireEvent.focus(view.getByText("(DEX)"));
-    expect(
-      await view.findByText(
-        "No DEX save, using straight DEX modifier"
-      )
-    ).toBeTruthy();
-    random.mockRestore();
-  });
-
-  test("formats zero and negative modifiers with the correct operator", async () => {
-    const zero = buildPrompt({ explicitModifier: 0 });
-    const random = jest.spyOn(Math, "random").mockReturnValue(10 / 20);
-    fireEvent.click(zero.view.getByRole("button", { name: /Roll/ }));
-    expect(getRollText(zero.view)).toContain("10 + (DEX) 0 = 10");
-    zero.view.unmount();
-    random.mockRestore();
-
-    const negative = buildPrompt({ explicitModifier: -2 });
-    const negativeRandom = jest.spyOn(Math, "random").mockReturnValue(10 / 20);
-    fireEvent.click(negative.view.getByRole("button", { name: /Roll/ }));
-    expect(getRollText(negative.view)).toContain("10 - (DEX) 2 = 8");
-    fireEvent.mouseEnter(negative.view.getByText("(DEX)"));
-    expect(await negative.view.findByText("DEX save -2")).toBeTruthy();
-    negativeRandom.mockRestore();
-  });
+      expect(rollDice).toHaveBeenCalledWith(expression);
+      expect(view.container.querySelector(".p-tag-save__result")).toBeNull();
+      expect(tag.IsActive()).toBe(true);
+      expect(removePrompt).not.toHaveBeenCalled();
+    }
+  );
 
   test("uses the current combatant alias", () => {
     const { view } = buildPrompt({ alias: "The Brute" });
@@ -161,21 +116,6 @@ describe("TagSavePrompt", () => {
     expect(
       view.getByText("The Brute: make a DEX save DC 14 to stop Restrained")
     ).toBeTruthy();
-  });
-
-  test("natural 1 and 20 have no special result rules", () => {
-    const naturalOne = buildPrompt({ explicitModifier: 0, dc: 1 });
-    const random = jest.spyOn(Math, "random").mockReturnValue(1 / 20);
-    fireEvent.click(naturalOne.view.getByRole("button", { name: /Roll/ }));
-    expect(naturalOne.view.getByText("Save succeeds")).toBeTruthy();
-    naturalOne.view.unmount();
-    random.mockRestore();
-
-    const naturalTwenty = buildPrompt({ explicitModifier: -20, dc: 1 });
-    const naturalTwentyRandom = jest.spyOn(Math, "random").mockReturnValue(1);
-    fireEvent.click(naturalTwenty.view.getByRole("button", { name: /Roll/ }));
-    expect(naturalTwenty.view.getByText("Save fails")).toBeTruthy();
-    naturalTwentyRandom.mockRestore();
   });
 
   test("Success works without rolling and inactivates only this tag", async () => {

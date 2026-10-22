@@ -13,6 +13,9 @@ import { CurrentSettings } from "../Settings/Settings";
 import { MockAccountClient } from "../MockAccountClient";
 import { Tag } from "../Combatant/Tag";
 import { Combatant } from "../Combatant/Combatant";
+import * as React from "react";
+import { fireEvent, render } from "@testing-library/react";
+import { PendingPrompts } from "../Prompts/PendingPrompts";
 
 describe("EncounterCommander", () => {
   let encounter: Encounter;
@@ -126,6 +129,34 @@ describe("EncounterCommander", () => {
     const prompts = trackerViewModel.PromptQueue.GetPrompts();
     expect(prompts).toHaveLength(1);
     expect(prompts[0][0].children).toBeTruthy();
+  });
+
+  test("a tag save opens the standard roll prompt without resolving the tag", async () => {
+    const combatant = addCombatantFromStatBlock(encounter, {
+      ...StatBlock.Default(),
+      Saves: [{ Name: "Dex", Modifier: -2 }]
+    });
+    encounter.EncounterFlow.StartEncounter();
+    const tag = addEndOfTurnSaveTag(combatant);
+    await encounterCommander.NextTurn();
+
+    const renderPrompts = () =>
+      React.createElement(PendingPrompts, {
+        promptsAndIds: trackerViewModel.PromptQueue.GetPrompts(),
+        removePrompt: trackerViewModel.PromptQueue.Remove
+      });
+    const view = render(renderPrompts());
+    fireEvent.click(view.getByRole("button", { name: "Roll" }));
+    view.rerender(renderPrompts());
+
+    expect(view.getByText("Rolled 1d20 - 2")).toBeTruthy();
+    fireEvent.click(view.getByRole("button", { name: "Apply advantage" }));
+    expect(view.getByText("Rolled 1d20 - 2 with advantage")).toBeTruthy();
+    expect(view.getByRole("button", { name: "Success" })).toBeTruthy();
+    expect(view.getByRole("button", { name: "Fail" })).toBeTruthy();
+    expect(tag.IsActive()).toBe(true);
+    expect(trackerViewModel.PromptQueue.GetPrompts()).toHaveLength(2);
+    view.unmount();
   });
 
   test("Previous Turn dismisses a save prompt from the undone boundary", async () => {
